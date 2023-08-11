@@ -2,8 +2,10 @@ from typing import Callable, Dict, Type, get_type_hints, Any, List
 
 from sproing.dependency import SproingDependency
 
+PRIMARIES_TYPE = Dict[Type, SproingDependency]
 DEPENDENCIES_TYPE = Dict[Type, List[SproingDependency]]
 
+primaries: PRIMARIES_TYPE = {}
 dependencies: DEPENDENCIES_TYPE = {}
 
 
@@ -11,9 +13,24 @@ def get_return_type(fn_: Callable):
     return get_type_hints(fn_)['return']
 
 
-def register_dependency(fn: Callable) -> DEPENDENCIES_TYPE:
+class SproingPrimaryDependencyError(Exception):
+    def __init__(self, dependency_name: str, type_hint: str):
+        super().__init__(
+            f"Dependency '{dependency_name}' is set as primary, but there is already "
+            f"a primary dependency for the type: {type_hint}.")
+
+
+def __register_primary_dependency(dependency: SproingDependency):
+    if dependency.return_type() in primaries:
+        raise SproingPrimaryDependencyError(dependency.name, str(dependency.return_type()))
+    primaries[dependency.return_type()] = dependency
+
+
+def register_dependency(fn: Callable, primary: bool) -> DEPENDENCIES_TYPE:
     dependency = SproingDependency(fn)
     dependencies.setdefault(dependency.return_type(), []).append(dependency)
+    if primary:
+        __register_primary_dependency(dependency)
     return dependencies
 
 
@@ -24,6 +41,8 @@ class NoSuchSproingDependency(Exception):
 
 
 def get_dependency(dependency_type: Type = None) -> SproingDependency:
-    if dependency_type not in dependencies:
+    if dependency_type in primaries:
+        return primaries[dependency_type]
+    elif dependency_type not in dependencies:
         raise NoSuchSproingDependency(dependency_type)
     return dependencies[dependency_type][0]

@@ -10,6 +10,7 @@ class SproingDependency:
 
     def __init__(self, provider: Callable):
         self.provider = provider
+        self.name = provider.__name__
 
     def __call__(self):
         return self.provider()
