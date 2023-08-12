@@ -1,22 +1,19 @@
-from inspect import signature
-from typing import Callable, Any, Type, List, get_type_hints, Dict, Iterable
-
-import container
-
-from sproing.container import get_return_type
+from . import container as c
+import typing as t
+import inspect as i
 
 
 class SproingDependency:
 
-    def __init__(self, provider: Callable):
+    def __init__(self, provider: t.Callable):
         self.provider = provider
         self.name = provider.__name__
 
     def __call__(self):
         return self.provider()
 
-    def return_type(self) -> Type[Any]:
-        return get_return_type(self.provider)
+    def return_type(self) -> t.Type[t.Any]:
+        return c.get_return_type(self.provider)
 
 
 class SproingArgValidationError(Exception):
@@ -35,21 +32,21 @@ class SproingReturnValidationError(Exception):
 
 
 class SproingDependencyDefinitionError(Exception):
-    def __init__(self, dependency_name: str, errors: List[SproingArgValidationError | SproingReturnValidationError]):
+    def __init__(self, dependency_name: str, errors: t.List[SproingArgValidationError | SproingReturnValidationError]):
         super().__init__(self.__make_message(dependency_name, errors))
         self.dependency_name = dependency_name
         self.errors = errors
 
     @staticmethod
     def __make_message(dependency_name: str,
-                       errors: List[SproingArgValidationError | SproingReturnValidationError]):
+                       errors: t.List[SproingArgValidationError | SproingReturnValidationError]):
         errors_str = "\n\t".join(str(error) for error in errors)
         return f"Bad definition of dependency {dependency_name}:\n\t{errors_str}"
 
 
 def __validate_parameters(dependency_name: str,
-                          hints: Dict[str, Type],
-                          parameters: Iterable[str]) -> List[SproingArgValidationError]:
+                          hints: t.Dict[str, t.Type],
+                          parameters: t.Iterable[str]) -> t.List[SproingArgValidationError]:
     errors = []
     for parameter in parameters:
         if parameter not in hints:
@@ -58,15 +55,15 @@ def __validate_parameters(dependency_name: str,
     return errors
 
 
-def __validate_return_type(dependency_name: str, hints: Dict[str, Type]) -> SproingReturnValidationError:
+def __validate_return_type(dependency_name: str, hints: t.Dict[str, t.Type]) -> SproingReturnValidationError:
     if 'return' not in hints:
         error = SproingReturnValidationError(dependency_name, "No return type hint provided.")
         return error
 
 
-def __validate_dependency(fn: Callable) -> List[SproingArgValidationError | SproingReturnValidationError]:
-    hints = get_type_hints(fn)
-    parameters = signature(fn).parameters
+def __validate_dependency(fn: t.Callable) -> t.List[SproingArgValidationError | SproingReturnValidationError]:
+    hints = t.get_type_hints(fn)
+    parameters = i.signature(fn).parameters
 
     errors = []
     errors.extend(__validate_parameters(fn.__name__, hints, parameters.keys()))
@@ -76,8 +73,8 @@ def __validate_dependency(fn: Callable) -> List[SproingArgValidationError | Spro
     return errors
 
 
-def dependency(fn: Callable) -> Callable:
+def dependency(fn: t.Callable) -> t.Callable:
     if validation_errors := __validate_dependency(fn):
         raise SproingDependencyDefinitionError(fn.__name__, validation_errors)
-    container.register_dependency(fn)
+    c.register_dependency(fn, primary=False)
     return fn

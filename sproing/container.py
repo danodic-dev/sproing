@@ -1,16 +1,15 @@
-from typing import Callable, Dict, Type, get_type_hints, Any, List
+import typing as t
+import sproing.dependency as spd
 
-from sproing.dependency import SproingDependency
-
-PRIMARIES_TYPE = Dict[Type, SproingDependency]
-DEPENDENCIES_TYPE = Dict[Type, List[SproingDependency]]
+PRIMARIES_TYPE = t.Dict[t.Type, spd.SproingDependency]
+DEPENDENCIES_TYPE = t.Dict[t.Type, t.List[spd.SproingDependency]]
 
 primaries: PRIMARIES_TYPE = {}
 dependencies: DEPENDENCIES_TYPE = {}
 
 
-def get_return_type(fn_: Callable):
-    return get_type_hints(fn_)['return']
+def get_return_type(fn_: t.Callable):
+    return t.get_type_hints(fn_)['return']
 
 
 class SproingPrimaryDependencyError(Exception):
@@ -20,14 +19,14 @@ class SproingPrimaryDependencyError(Exception):
             f"a primary dependency for the type: {type_hint}.")
 
 
-def __register_primary_dependency(dependency: SproingDependency):
+def __register_primary_dependency(dependency: spd.SproingDependency):
     if dependency.return_type() in primaries:
         raise SproingPrimaryDependencyError(dependency.name, str(dependency.return_type()))
     primaries[dependency.return_type()] = dependency
 
 
-def register_dependency(fn: Callable, primary: bool) -> DEPENDENCIES_TYPE:
-    dependency = SproingDependency(fn)
+def register_dependency(fn: t.Callable, primary: bool) -> DEPENDENCIES_TYPE:
+    dependency = spd.SproingDependency(fn)
     dependencies.setdefault(dependency.return_type(), []).append(dependency)
     if primary:
         __register_primary_dependency(dependency)
@@ -35,12 +34,12 @@ def register_dependency(fn: Callable, primary: bool) -> DEPENDENCIES_TYPE:
 
 
 class NoSuchSproingDependency(Exception):
-    def __init__(self, dependency_type: Type):
+    def __init__(self, dependency_type: t.Type):
         super().__init__(f"No dependency registered for type: {str(dependency_type)}")
         self.dependency_type = dependency_type
 
 
-def get_dependency(dependency_type: Type = None) -> SproingDependency:
+def get_dependency(dependency_type: t.Type = None) -> spd.SproingDependency:
     if dependency_type in primaries:
         return primaries[dependency_type]
     elif dependency_type not in dependencies:
