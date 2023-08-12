@@ -1,2 +1,2 @@
-from .dependency import dependency
-from .injection import inject
+from sproing.injection import inject
+from sproing.dependency import dependency

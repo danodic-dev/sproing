@@ -1,17 +1,17 @@
-from . import container as c
-import typing as t
+from typing import get_type_hints, Callable, Dict, Any
+
+from sproing.container import get_dependency
 
 
-def __get_injected_dependencies(fn: t.Callable) -> t.Dict[str, t.Any]:
-    argspec = t.get_type_hints(fn)
+def __get_injected_dependencies(fn: Callable) -> Dict[str, Any]:
+    argspec = get_type_hints(fn)
     dependencies = {}
     for argname, hint in argspec.items():
-        dependency = c.get_dependency(hint)
-        dependencies[argname] = dependency()
+        dependencies[argname] = get_dependency(hint)
     return dependencies
 
 
-def inject(fn: t.Callable) -> t.Callable:
+def inject(fn: Callable) -> Callable:
     def injected():
         dependencies = __get_injected_dependencies(fn)
         return fn(**dependencies)
