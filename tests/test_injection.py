@@ -1,5 +1,3 @@
-import pytest
-
 from sproing import dependency, inject
 
 
@@ -70,7 +68,6 @@ def test_inject_implicit_primary(initialize):
     assert sample() == "Hello, "
 
 
-@pytest.mark.something
 def test_inject_named_dependency(initialize):
     def sample_dependency() -> str:
         return "A"
@@ -87,3 +84,39 @@ def test_inject_named_dependency(initialize):
         return value
 
     assert sample() == "A"
+
+
+def test_inject_singleton_dependency(initialize):
+    value = 0
+
+    def sample_dependency() -> int:
+        nonlocal value
+        value += 1
+        return value
+
+    dependency(sample_dependency, singleton=True)
+
+    @inject()
+    def sample(arg: int) -> int:
+        return arg
+
+    assert sample() == 1
+    assert sample() == 1
+
+
+def test_inject_non_singleton_dependency(initialize):
+    value = 0
+
+    def sample_dependency() -> int:
+        nonlocal value
+        value += 1
+        return value
+
+    dependency(sample_dependency, singleton=False)
+
+    @inject()
+    def sample(arg: int) -> int:
+        return arg
+
+    assert sample() == 1
+    assert sample() == 2
