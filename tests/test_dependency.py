@@ -101,3 +101,31 @@ def test_primary_named_dependency(initialize):
                     "A dependency cannot be both primary and named.")
 
         assert expected in excinfo.value
+
+
+def test_singleton_dependency(initialize):
+    value = 0
+
+    def singleton_dependency() -> int:
+        nonlocal value
+        value += 1
+        return value
+
+    sproing_dependency = dependency(singleton_dependency, singleton=True)
+
+    assert sproing_dependency() == 1
+    assert sproing_dependency() == 1
+
+
+def test_not_singleton_dependency(initialize):
+    value = 0
+
+    def singleton_dependency() -> int:
+        nonlocal value
+        value += 1
+        return value
+
+    sproing_dependency = dependency(singleton_dependency, singleton=False)
+
+    assert sproing_dependency() == 1
+    assert sproing_dependency() == 2

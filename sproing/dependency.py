@@ -6,11 +6,26 @@ from sproing.container import register_dependency, get_return_type
 
 class SproingDependency:
 
-    def __init__(self, provider: Callable):
+    def __init__(self, provider: Callable, *, singleton=False):
         self.provider = provider
         self.name = provider.__name__
 
+        self.value = None
+        self.strategy = self.__factory_strategy
+        if singleton:
+            self.strategy = self.__singleton_strategy
+
     def __call__(self):
+        return self.strategy()
+
+    def __singleton_strategy(self):
+        return self.value or self.__initialize_singleton()
+
+    def __initialize_singleton(self) -> Any:
+        self.value = self.provider()
+        return self.value
+
+    def __factory_strategy(self) -> Any:
         return self.provider()
 
     def return_type(self) -> Type[Any]:
@@ -74,9 +89,12 @@ def __validate_dependency(fn: Callable) -> List[SproingArgValidationError | Spro
     return errors
 
 
-def dependency(fn: Callable, *, primary: bool = False, name: str = None) -> Callable:
+def dependency(fn: Callable, *,
+               primary: bool = False,
+               name: str = None,
+               singleton: bool = False) -> SproingDependency:
     if validation_errors := __validate_dependency(fn):
         raise SproingDependencyDefinitionError(fn.__name__, validation_errors)
-    dep = SproingDependency(fn)
-    register_dependency(dep, primary, name)
-    return fn
+    sproing_dependency = SproingDependency(fn, singleton=singleton)
+    register_dependency(sproing_dependency, primary, name)
+    return sproing_dependency
