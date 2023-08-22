@@ -74,9 +74,9 @@ def __validate_dependency(fn: Callable) -> List[SproingArgValidationError | Spro
     return errors
 
 
-def dependency(fn: Callable) -> Callable:
+def dependency(fn: Callable, *, primary: bool = False, name: str = None) -> Callable:
     if validation_errors := __validate_dependency(fn):
         raise SproingDependencyDefinitionError(fn.__name__, validation_errors)
     dep = SproingDependency(fn)
-    register_dependency(dep, primary=False)
+    register_dependency(dep, primary, name)
     return fn

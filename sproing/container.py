@@ -7,9 +7,21 @@ if TYPE_CHECKING:
 
 PRIMARIES_TYPE = Dict[type, "SproingDependency"]
 DEPENDENCIES_TYPE = Dict[Type, List["SproingDependency"]]
+NAMED_DEPENDENCIES_TYPE = Dict[str, "SproingDependency"]
 
-primaries: PRIMARIES_TYPE = {}
-dependencies: DEPENDENCIES_TYPE = {}
+primaries: PRIMARIES_TYPE
+dependencies: DEPENDENCIES_TYPE
+named_dependencies: NAMED_DEPENDENCIES_TYPE
+
+
+def initialize_container():
+    global primaries, dependencies, named_dependencies
+    primaries = {}
+    dependencies = {}
+    named_dependencies = {}
+
+
+initialize_container()
 
 
 def get_return_type(fn_: Callable):
@@ -29,10 +41,36 @@ def __register_primary_dependency(dependency: "SproingDependency"):
     primaries[dependency.return_type()] = dependency
 
 
-def register_dependency(dependency: SproingDependency, primary: bool) -> DEPENDENCIES_TYPE:
+class SproingNamedDependencyError(Exception):
+    def __init__(self, dependency_name: str, name: str):
+        super().__init__(
+            f"Error registering dependency '{dependency_name}'. "
+            f"Another dependency is already using the name: {name}")
+
+
+class SproingDependencyError(Exception):
+    def __init__(self, error: str):
+        super().__init__(error)
+
+
+def __register_named_dependency(dependency: "SproingDependency", name: str):
+    if name in named_dependencies:
+        raise SproingNamedDependencyError(dependency.name, name)
+    named_dependencies[name] = dependency
+
+
+def register_dependency(dependency: SproingDependency,
+                        primary: bool,
+                        name: str = None) -> DEPENDENCIES_TYPE:
     dependencies.setdefault(dependency.return_type(), []).append(dependency)
-    if primary:
+
+    if primary and name:
+        raise SproingDependencyError(f"Error registering dependency '{dependency.name}'. "
+                                     "A dependency cannot be both primary and named.")
+    elif primary:
         __register_primary_dependency(dependency)
+    elif name:
+        __register_named_dependency(dependency, name)
     return dependencies
 
 
@@ -48,3 +86,15 @@ def get_dependency(dependency_type: Type = None) -> "SproingDependency":
     elif dependency_type not in dependencies:
         raise NoSuchSproingDependency(dependency_type)
     return dependencies[dependency_type][0]
+
+
+class NoSuchNamedSproingDependency(Exception):
+    def __init__(self, name: str, dependency_type: Type):
+        super().__init__(f"No dependency registered for name and type: {name}, {str(dependency_type)}")
+        self.dependency_type = dependency_type
+
+
+def get_named_dependency(dependency_name: str) -> "SproingDependency":
+    if dependency_name not in named_dependencies:
+        raise NoSuchNamedSproingDependency(dependency_name, type)
+    return named_dependencies[dependency_name]
