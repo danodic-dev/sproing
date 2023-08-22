@@ -33,18 +33,29 @@ def __validate_explicit_names(injected_name: str, argspec, explicit: Dict[str, s
         raise SproingInjectionDefinitionError(injected_name, errors)
 
 
+def __get_explicit_injection(explicit: Dict[str, str]) -> Dict[str, Any]:
+    dependencies = {}
+    for argname, depname in explicit.items():
+        dependencies[argname] = get_named_dependency(depname)()
+    return dependencies
+
+
+def __get_default_injection(fn: Callable, explicit: Dict[str, str]) -> Dict[str, Any]:
+    argspec = get_type_hints(fn)
+    dependencies = {}
+    for argname, hint in argspec.items():
+        if argname != 'return' and (not explicit or argname not in explicit):
+            dependencies[argname] = get_dependency(hint)()
+    return dependencies
+
+
 def __get_injected_dependencies(fn: Callable, explicit: Dict[str, str] = None) -> Dict[str, Any]:
     argspec = get_type_hints(fn)
     dependencies = {}
     if explicit:
         __validate_explicit_names(fn.__name__, argspec, explicit)
-        for argname, depname in explicit.items():
-            dependencies[argname] = get_named_dependency(depname)()
-    for argname, hint in argspec.items():
-        if not explicit or argname not in explicit:
-            dependencies[argname] = get_dependency(hint)()
-    if 'return' in dependencies:
-        del dependencies['return']
+        dependencies.update(__get_explicit_injection(explicit))
+    dependencies.update(__get_default_injection(fn, explicit))
     return dependencies
 
 
