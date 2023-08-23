@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from sproing import dependency, inject
 from sproing.container import All
 
@@ -13,6 +15,23 @@ def test_inject(initialize):
         return f"Hello, {world}"
 
     assert sample() == "Hello, world!"
+
+
+def test_inject_nested_dependency(initialize):
+    def sample_dependency() -> str:
+        return "world!"
+
+    def another_dependency(value: str) -> Tuple[str, int]:
+        return value, 0
+
+    dependency(sample_dependency)
+    dependency(another_dependency)
+
+    @inject()
+    def sample(value: Tuple[str, int]) -> int:
+        return value[1]
+
+    assert sample() == 0
 
 
 def test_multiple_inject(initialize):

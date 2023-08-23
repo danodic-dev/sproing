@@ -22,18 +22,18 @@ class SproingDependency:
             if lazy is not None and not lazy:
                 self.__initialize_singleton()
 
-    def __call__(self):
-        return self.strategy()
+    def __call__(self, **kwargs):
+        return self.strategy(**kwargs)
 
-    def __singleton_strategy(self):
-        return self.value or self.__initialize_singleton()
+    def __singleton_strategy(self, **kwargs):
+        return self.value or self.__initialize_singleton(**kwargs)
 
-    def __initialize_singleton(self) -> Any:
-        self.value = self.provider()
+    def __initialize_singleton(self, **kwargs) -> Any:
+        self.value = self.provider(**kwargs)
         return self.value
 
-    def __factory_strategy(self) -> Any:
-        return self.provider()
+    def __factory_strategy(self, **kwargs) -> Any:
+        return self.provider(**kwargs)
 
     def return_type(self) -> Type[Any]:
         return get_return_type(self.provider)

@@ -49,6 +49,7 @@ def __get_default_injection(fn: Callable, explicit: Dict[str, str]) -> Dict[str,
             if len(resolved) > 1:
                 dependencies[argname] = [dependency() for dependency in resolved]
             else:
+                #nested_dependencies = __get_injected_dependencies(resolved[0])
                 dependencies[argname] = resolved[0]()
     return dependencies
 
