@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Type, Callable, get_type_hints, List, Dict, TYPE_CHECKING
+import typing
+from typing import Type, Callable, get_type_hints, List, Dict, TYPE_CHECKING, Iterable, TypeVar, Generic, Any, Sequence
 
 if TYPE_CHECKING:
     from sproing.dependency import SproingDependency
@@ -22,6 +23,12 @@ def initialize_container():
 
 
 initialize_container()
+
+T = TypeVar("T")
+
+
+class All(Generic[T]):
+    pass
 
 
 def get_return_type(fn_: Callable):
@@ -61,7 +68,7 @@ def __register_named_dependency(dependency: "SproingDependency", name: str):
 
 def register_dependency(dependency: SproingDependency,
                         primary: bool,
-                        name: str = None) -> DEPENDENCIES_TYPE:
+                        name: str | None = None) -> DEPENDENCIES_TYPE:
     dependencies.setdefault(dependency.return_type(), []).append(dependency)
 
     if primary and name:
@@ -80,12 +87,39 @@ class NoSuchSproingDependency(Exception):
         self.dependency_type = dependency_type
 
 
-def get_dependency(dependency_type: Type = None) -> "SproingDependency":
-    if dependency_type in primaries:
-        return primaries[dependency_type]
-    elif dependency_type not in dependencies:
-        raise NoSuchSproingDependency(dependency_type)
-    return dependencies[dependency_type][0]
+def __is_all(dependency_type: Any) -> bool:
+    return dependency_type.__name__ == 'All'
+
+
+def __get_all_generic_type(type_hint: All) -> Type:
+    return typing.get_args(type_hint)[0]
+
+
+def __get_all_dependencies(dependency_type: All) -> Sequence["SproingDependency"]:
+    generic_type = __get_all_generic_type(dependency_type)
+    try:
+        return dependencies[generic_type]
+    except KeyError as e:
+        raise NoSuchSproingDependency(generic_type) from e
+
+
+def __get_primary_dependency(dependency_type: Type) -> "SproingDependency":
+    return primaries[dependency_type]
+
+
+def __get_single_dependency(dependency_type: Type) -> Sequence[SproingDependency]:
+    try:
+        return dependencies[dependency_type][:1]
+    except KeyError as e:
+        raise NoSuchSproingDependency(dependency_type) from e
+
+
+def get_dependency(dependency_type: Type) -> Sequence[SproingDependency]:
+    if __is_all(dependency_type):
+        return __get_all_dependencies(dependency_type)
+    elif dependency_type in primaries:
+        return [primaries[dependency_type]]
+    return __get_single_dependency(dependency_type)
 
 
 class NoSuchNamedSproingDependency(Exception):

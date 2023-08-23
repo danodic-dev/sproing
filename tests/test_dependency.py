@@ -3,7 +3,7 @@ import pytest
 from sproing import container
 from sproing import dependency
 from sproing.container import SproingNamedDependencyError, SproingDependencyError
-from sproing.dependency import SproingDependencyDefinitionError, SproingDependency
+from sproing.dependency import SproingDependencyDefinitionError, SproingDependency, SproingLazyDependencyDefinitionError
 
 
 def test_dependency(initialize):
@@ -129,3 +129,29 @@ def test_not_singleton_dependency(initialize):
 
     assert sproing_dependency() == 1
     assert sproing_dependency() == 2
+
+
+def test_lazy_singleton(initialize):
+    value = 0
+
+    def sample_dependency() -> int:
+        nonlocal value
+        return value
+
+    sproing_dependency = dependency(sample_dependency, singleton=True, lazy=True)
+
+    value = 1
+    assert sproing_dependency() == 1
+    assert sproing_dependency() == 1
+
+
+def test_not_lazy_factory(initialize):
+    def sample_dependency() -> int:
+        ...
+
+    with pytest.raises(SproingLazyDependencyDefinitionError) as excinfo:
+        dependency(sample_dependency, singleton=False, lazy=False)
+
+        expected = ("Error defining dependency 'sample_dependency' lazyness: "
+                    "must be lazy when not singleton.")
+        assert expected in excinfo.value

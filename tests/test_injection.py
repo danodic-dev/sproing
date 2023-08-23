@@ -1,4 +1,5 @@
 from sproing import dependency, inject
+from sproing.container import All
 
 
 def test_inject(initialize):
@@ -120,3 +121,21 @@ def test_inject_non_singleton_dependency(initialize):
 
     assert sample() == 1
     assert sample() == 2
+
+
+def test_inject_all_of(initialize):
+    def sample_dependency() -> str:
+        return "A"
+
+    dependency(sample_dependency)
+
+    def another_dependency() -> str:
+        return "B"
+
+    dependency(another_dependency)
+
+    @inject()
+    def sample(arg: All[str]):
+        return arg
+
+    assert sample() == ["A", "B"]

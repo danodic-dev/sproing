@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from inspect import signature
 from typing import get_type_hints, Callable, List, Dict, Type, Iterable, Any
 
@@ -6,14 +8,19 @@ from sproing.container import register_dependency, get_return_type
 
 class SproingDependency:
 
-    def __init__(self, provider: Callable, *, singleton=False):
+    def __init__(self, provider: Callable, *, singleton: bool = False, lazy: bool | None = None):
         self.provider = provider
         self.name = provider.__name__
+
+        if not singleton and lazy is not None and not lazy:
+            raise SproingLazyDependencyDefinitionError(self.name, "must be lazy when not singleton.")
 
         self.value = None
         self.strategy = self.__factory_strategy
         if singleton:
             self.strategy = self.__singleton_strategy
+            if lazy is not None and not lazy:
+                self.__initialize_singleton()
 
     def __call__(self):
         return self.strategy()
@@ -60,6 +67,13 @@ class SproingDependencyDefinitionError(Exception):
         return f"Bad definition of dependency {dependency_name}:\n\t{errors_str}"
 
 
+class SproingLazyDependencyDefinitionError(Exception):
+    def __init__(self, dependency_name: str, error: str):
+        super().__init__(f"Error defining dependency '{dependency_name}' lazyness: {error}")
+        self.dependency_name = dependency_name
+        self.error = error
+
+
 def __validate_parameters(dependency_name: str,
                           hints: Dict[str, Type],
                           parameters: Iterable[str]) -> List[SproingArgValidationError]:
@@ -91,10 +105,11 @@ def __validate_dependency(fn: Callable) -> List[SproingArgValidationError | Spro
 
 def dependency(fn: Callable, *,
                primary: bool = False,
-               name: str = None,
-               singleton: bool = False) -> SproingDependency:
+               name: str | None = None,
+               singleton: bool = False,
+               lazy: bool | None = None) -> SproingDependency:
     if validation_errors := __validate_dependency(fn):
         raise SproingDependencyDefinitionError(fn.__name__, validation_errors)
-    sproing_dependency = SproingDependency(fn, singleton=singleton)
+    sproing_dependency = SproingDependency(fn, singleton=singleton, lazy=lazy)
     register_dependency(sproing_dependency, primary, name)
     return sproing_dependency

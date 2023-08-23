@@ -45,11 +45,15 @@ def __get_default_injection(fn: Callable, explicit: Dict[str, str]) -> Dict[str,
     dependencies = {}
     for argname, hint in argspec.items():
         if argname != 'return' and (not explicit or argname not in explicit):
-            dependencies[argname] = get_dependency(hint)()
+            resolved = get_dependency(hint)
+            if len(resolved) > 1:
+                dependencies[argname] = [dependency() for dependency in resolved]
+            else:
+                dependencies[argname] = resolved[0]()
     return dependencies
 
 
-def __get_injected_dependencies(fn: Callable, explicit: Dict[str, str] = None) -> Dict[str, Any]:
+def __get_injected_dependencies(fn: Callable, explicit: Dict[str, str] | None = None) -> Dict[str, Any]:
     argspec = get_type_hints(fn)
     dependencies = {}
     if explicit:
