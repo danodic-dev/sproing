@@ -1,4 +1,4 @@
-from container import dependency, dependencies, inject
+from proto import dependency, inject
 
 
 class Hey:
